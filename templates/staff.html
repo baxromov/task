@@ -1,0 +1,132 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/jqtree.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+    <script src="{% static 'js/tree.jquery.js' %}"></script>
+    <script src="{% static 'js/bootstrap-dropdown.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script>
+        $(function () {
+            var $tree = $('#tree1')
+            let foundMatch = false;
+
+
+            $tree.tree({
+                dataUrl: 'http://127.0.0.1:8000/staff/',
+                buttonLeft: false,
+                closedIcon: $('<i class="icon-plus"></i>'),
+                openedIcon: $('<i class="icon-minus"></i>'),
+                {#saveState: true,#}
+                autoOpen: false,
+                useContextMenu: false,
+                onCreateLi: (node, $el) => {
+
+                    var li = $el.find('.jqtree_common')
+                    {#li.addClass('nav')#}
+                    var a = li.find('.jqtree-title')
+                    a.addClass('btn')
+
+
+                    if (foundMatch && !node.openForMatch && !node.parent.matches) {
+                        $el.addClass("hidden-node");
+                    }
+
+                    if (node.matches) {
+                        $el.addClass("highlight-node");
+                    }
+                }
+            })
+
+
+            $("#search").on("click", () => {
+                const searchTerm = $("#search-term").val().toLowerCase();
+                const tree = $tree.tree("getTree");
+
+                if (!searchTerm) {
+                    foundMatch = false;
+
+                    tree.iterate((node) => {
+                        node['openForMatch'] = false;
+                        node["matches"] = false;
+                        return true;
+                    });
+
+                    $tree.tree("refresh");
+                    return;
+                }
+
+                foundMatch = false;
+
+                tree.iterate((node) => {
+                    const matches = node.name.toLowerCase().includes(searchTerm);
+                    node["openForMatch"] = matches;
+                    node["matches"] = matches;
+
+                    if (matches) {
+                        foundMatch = true;
+
+                        if (node.isFolder()) {
+                            node.is_open = true;
+                        }
+
+                        let parent = node.parent;
+                        while (parent) {
+                            parent["openForMatch"] = true;
+                            parent.is_open = true;
+                            parent = parent.parent;
+                        }
+                    }
+
+                    return true;
+                });
+
+                $tree.tree("refresh");
+            });
+
+            $('#tree1').on(
+                'tree.dblclick',
+                function (event) {
+                    event.preventDefault();
+                    var node = event.node;
+                    var text = "ФИО: " + node.name + "\n" +
+                        "Должность: " + node.position + "\n" +
+                        "Дата приема на работу: " + node.employment_date + "\n" +
+                        "Размер заработной платы: " + node.salary
+                    alert(text)
+                }
+            );
+
+
+        })
+
+    </script>
+    <style>
+        .hidden-node {
+            display: none;
+        }
+
+        .highlight-node > .jqtree-element > .jqtree-title {
+            font-weight: bold;
+        }
+
+        #search-term {
+            margin-bottom: 16px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div>
+    <input id="search-term" autofocus/>
+    <button id="search">Search</button>
+</div>
+<div id="tree1"></div>
+
+</body>
+</html>
